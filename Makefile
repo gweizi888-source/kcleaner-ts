@@ -12,12 +12,15 @@ LDFLAGS	=\
 	-framework Security\
 	-lobjc\
 	-lsqlite3\
-	-bind_at_load
+	-miphoneos-version-min=15.0\
+	-Wl,-fixup_chains,off
 
-GCC_ARM = $(GCC_BIN) -Os -Wimplicit -isysroot $(SDK) $(ARCH_FLAGS)
+GCC_ARM = $(GCC_BIN) -Os -Wimplicit -isysroot $(SDK) $(ARCH_FLAGS) -miphoneos-version-min=15.0
 
-default: main.o kcleaner_ext.o list
+default: main.o kcleaner_ext.o
 	@$(GCC_ARM) $(LDFLAGS) main.o kcleaner_ext.o -o kcleaner_ts
+
+.PHONY: list
 
 main.o: main.m kcleaner_ext.h
 	$(GCC_ARM) -c main.m

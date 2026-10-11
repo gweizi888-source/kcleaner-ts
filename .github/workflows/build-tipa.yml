@@ -25,6 +25,9 @@ jobs:
       - name: Build kcleaner_ts
         run: make clean && make
 
+      - name: Verify Mach-O
+        run: file kcleaner_ts && otool -hv kcleaner_ts | head -n 5
+
       - name: Sign for TrollStore
         run: make trollsign
 
