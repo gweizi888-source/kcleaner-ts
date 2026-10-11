@@ -1,7 +1,7 @@
 GCC_BIN="`xcrun --sdk iphoneos --find gcc`"
 SDK="`xcrun --sdk iphoneos --show-sdk-path`"
-#support iPhone 3GS and above, delete armv6 to avoid SDK error
-ARCH_FLAGS=-arch armv7 -arch armv7s -arch arm64
+# iOS 15+ / TrollStore: arm64 only (CI-friendly on current Xcode)
+ARCH_FLAGS=-arch arm64
 
 LDFLAGS	=\
 	-F$(SDK)/System/Library/Frameworks/\
@@ -16,18 +16,24 @@ LDFLAGS	=\
 
 GCC_ARM = $(GCC_BIN) -Os -Wimplicit -isysroot $(SDK) $(ARCH_FLAGS)
 
-default: main.o list
-	@$(GCC_ARM) $(LDFLAGS) main.o -o keychain_dumper
+default: main.o kcleaner_ext.o list
+	@$(GCC_ARM) $(LDFLAGS) main.o kcleaner_ext.o -o kcleaner_ts
 
-main.o: main.m
+main.o: main.m kcleaner_ext.h
 	$(GCC_ARM) -c main.m
 
+kcleaner_ext.o: kcleaner_ext.m kcleaner_ext.h
+	$(GCC_ARM) -c kcleaner_ext.m
+
 clean:
-	rm -f keychain_dumper *.o
+	rm -f kcleaner_ts keychain_dumper *.o
 
 list:
 	security find-identity -pcodesigning
 	@printf '\nTo codesign, please run: \n\tCER="<40 character hex string for certificate>" make codesign\n'
 
 codesign:
-	codesign -fs "$(CER)" --entitlements entitlements.xml keychain_dumper
+	codesign -fs "$(CER)" --entitlements entitlements.xml kcleaner_ts
+
+trollsign:
+	ldid -S trollstore/entitlements.plist kcleaner_ts

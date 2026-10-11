@@ -1,0 +1,45 @@
+name: Build KCleanerTS tipa
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ldid
+        run: |
+          git clone --depth 1 https://github.com/opa334/ldid.git /tmp/ldid
+          cd /tmp/ldid && ./make.sh
+          echo "/tmp/ldid" >> "$GITHUB_PATH"
+
+      - name: Build kcleaner_ts
+        run: make clean && make
+
+      - name: Sign for TrollStore
+        run: make trollsign
+
+      - name: Package tipa
+        run: |
+          chmod +x trollstore/pack-tipa.sh
+          ./trollstore/pack-tipa.sh
+
+      - name: Upload tipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KCleanerTS-tipa
+          path: build/KCleanerTS.tipa
+          if-no-files-found: error
+
+      - name: Upload bare binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: kcleaner_ts-arm64
+          path: kcleaner_ts

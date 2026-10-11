@@ -32,8 +32,10 @@
 #import <Foundation/Foundation.h>
 #import <Security/Security.h>
 #import "./NSTask.h"
+#import "kcleaner_ext.h"
 #import "sqlite3.h"
 #include "stdio.h"
+#include <unistd.h>
 
 #define KNRM "\x1B[0m"
 #define KRED "\x1B[31m"
@@ -138,16 +140,20 @@ void printCertPEM(NSData *data) {
 
 
 void printUsage() {
-  printToStdOut(@"Usage: keychain_dumper [-e]|[-h]|[-agnick]\n");
-  printToStdOut(@"<no flags>: Dump Password Keychain Items (Generic Password, Internet Passwords)\n");
-  printToStdOut(@"-a: Dump All Keychain Items (Generic Passwords, Internet Passwords, Identities, Certificates, and Keys)\n");
-  printToStdOut(@"-e: Dump Entitlements\n");
-  printToStdOut(@"-g: Dump Generic Passwords\n");
-  printToStdOut(@"-n: Dump Internet Passwords\n");
-  printToStdOut(@"-i: Dump Identities\n");
-  printToStdOut(@"-c: Dump Certificates\n");
-  printToStdOut(@"-k: Dump Keys\n");
-  printToStdOut(@"-s: Dump Selected Entitlement Group\n");
+  printToStdOut(@"KCleanerTS (keychain tool for TrollStore / iOS 15–16)\n");
+  printToStdOut(@"Usage: kcleaner_ts [-agnickhs]|[-e]|[-T]|[-L]|[-F keyword]|[-X]\n");
+  printToStdOut(@"<no flags>: Dump Generic + Internet passwords\n");
+  printToStdOut(@"-a: Dump all keychain classes\n");
+  printToStdOut(@"-e: Dump entitlements plist (SQLite groups, legacy)\n");
+  printToStdOut(@"-T: Dump TrollStore entitlements template (API groups + TS keys)\n");
+  printToStdOut(@"-L: List access groups with item counts\n");
+  printToStdOut(@"-f KEY: Filter dump output by keyword\n");
+  printToStdOut(@"-G GROUP: Filter by access group substring\n");
+  printToStdOut(@"-j: JSON lines output (password items)\n");
+  printToStdOut(@"-F KEY: Delete generic/internet items matching keyword\n");
+  printToStdOut(@"-X: Delete all generic/internet (requires KCCLEANER_CONFIRM=DELETE_ALL)\n");
+  printToStdOut(@"-g/-n/-i/-c/-k: Dump selected class\n");
+  printToStdOut(@"-s: Interactive dump by entitlement group\n");
 }
 
 void dumpKeychainEntitlements() {
@@ -241,8 +247,31 @@ NSMutableArray *getCommandLineOptions(int argc, char **argv) {
     [arguments addObject:(id)kSecClassInternetPassword];
     return [arguments autorelease];
   }
-  while ((argument = getopt (argc, argv, "aegnickhs")) != -1) {
+  optind = 1;
+  while ((argument = getopt (argc, argv, "aegnickhsf:G:LF:X:jT")) != -1) {
     switch(argument) {
+     case 'f':
+     kc_filterKeyword = [[NSString alloc] initWithUTF8String:optarg];
+     break;
+     case 'G':
+     kc_accessGroupFilter = [[NSString alloc] initWithUTF8String:optarg];
+     break;
+     case 'L':
+     kc_action = KCActionListGroups;
+     break;
+     case 'F':
+     kc_deleteKeyword = [[NSString alloc] initWithUTF8String:optarg];
+     kc_action = KCActionDeleteKeyword;
+     break;
+     case 'X':
+     kc_action = KCActionDeleteAllPasswords;
+     break;
+     case 'j':
+     kc_jsonOutput = YES;
+     break;
+     case 'T':
+     kc_action = KCActionDumpEntitlementsTS;
+     break;
      case 's':
      listEntitlements();
      [arguments addObject:(id)kSecClassGenericPassword];
@@ -285,6 +314,10 @@ NSMutableArray *getCommandLineOptions(int argc, char **argv) {
      default:
      continue;
    }
+ }
+ if ([arguments count] == 0 && kc_action == KCActionDump) {
+   [arguments addObject:(id)kSecClassGenericPassword];
+   [arguments addObject:(id)kSecClassInternetPassword];
  }
  return [arguments autorelease];
 }
@@ -473,6 +506,18 @@ void printResultsForSecClass(NSArray *keychainItems, CFTypeRef kSecClassType) {
   }
   NSDictionary *keychainItem;
   for (keychainItem in keychainItems) {
+    if ((kSecClassType == kSecClassGenericPassword || kSecClassType == kSecClassInternetPassword) &&
+        !kc_itemPassesFilters(keychainItem)) {
+      continue;
+    }
+    if (kc_jsonOutput &&
+        (kSecClassType == kSecClassGenericPassword || kSecClassType == kSecClassInternetPassword)) {
+      if ([selectedEntitlementConstantList count] == 0 ||
+          [selectedEntitlementConstantList containsObject:[keychainItem objectForKey:(id)kSecAttrAccessGroup]]) {
+        kc_printPasswordItemAsJson(keychainItem, kSecClassType);
+      }
+      continue;
+    }
     if (kSecClassType == kSecClassGenericPassword) {
       if ([selectedEntitlementConstantList count] == 0) {
         printGenericPassword(keychainItem);
@@ -522,7 +567,22 @@ int main(int argc, char **argv) {
 	id pool=[NSAutoreleasePool new];
 	NSArray* arguments;
 	arguments = getCommandLineOptions(argc, argv);
-	NSArray *passwordItems;
+	if (kc_action == KCActionListGroups) {
+    kc_listAccessGroups();
+    exit(EXIT_SUCCESS);
+  }
+  if (kc_action == KCActionDumpEntitlementsTS) {
+    kc_dumpEntitlementsForTrollStore();
+    exit(EXIT_SUCCESS);
+  }
+  if (kc_action == KCActionDeleteKeyword) {
+    kc_deleteMatchingPasswords(kc_deleteKeyword);
+    exit(EXIT_SUCCESS);
+  }
+  if (kc_action == KCActionDeleteAllPasswords) {
+    kc_deleteAllPasswords();
+    exit(EXIT_SUCCESS);
+  }
 	if ([arguments indexOfObject:@"dumpEntitlements"] != NSNotFound) {
     dumpKeychainEntitlements();
     exit(EXIT_SUCCESS);
