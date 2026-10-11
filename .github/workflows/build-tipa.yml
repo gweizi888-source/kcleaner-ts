@@ -31,7 +31,9 @@ jobs:
         run: make clean && make
 
       - name: Verify Mach-O
-        run: file kcleaner_ts && otool -hv kcleaner_ts | head -n 5
+        run: |
+          file kcleaner_ts
+          otool -l kcleaner_ts | awk '/LC_BUILD_VERSION/{getline; getline; print}' | head -n 3
 
       - name: Sign for TrollStore
         run: make trollsign

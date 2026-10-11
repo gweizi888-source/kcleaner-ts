@@ -1,7 +1,7 @@
-GCC_BIN="`xcrun --sdk iphoneos --find gcc`"
+GCC_BIN="`xcrun --sdk iphoneos --find clang`"
 SDK="`xcrun --sdk iphoneos --show-sdk-path`"
-# iOS 15+ / TrollStore: arm64 only (CI-friendly on current Xcode)
-ARCH_FLAGS=-arch arm64
+IOS_TARGET=arm64-apple-ios15.0
+ARCH_FLAGS=-target $(IOS_TARGET)
 
 LDFLAGS	=\
 	-F$(SDK)/System/Library/Frameworks/\
@@ -12,9 +12,9 @@ LDFLAGS	=\
 	-framework Security\
 	-lobjc\
 	-lsqlite3\
-	-miphoneos-version-min=15.0
+	-target $(IOS_TARGET)
 
-GCC_ARM = $(GCC_BIN) -Os -Wimplicit -isysroot $(SDK) $(ARCH_FLAGS) -miphoneos-version-min=15.0
+GCC_ARM = $(GCC_BIN) -Os -Wimplicit -isysroot $(SDK) $(ARCH_FLAGS)
 
 default: main.o kcleaner_ext.o
 	@$(GCC_ARM) $(LDFLAGS) main.o kcleaner_ext.o -o kcleaner_ts
