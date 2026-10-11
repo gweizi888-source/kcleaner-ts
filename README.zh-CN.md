@@ -12,6 +12,10 @@
 
 也可在 Actions 里点 **Run workflow** 手动触发。
 
+仓库地址：[github.com/gweizi888-source/kcleaner-ts](https://github.com/gweizi888-source/kcleaner-ts)
+
+装好后若钥匙串权限不全，在设备上执行 `kcleaner_ts -T > ent.plist`，用 ldid 按 plist 重新签名，或把 `-T` 输出的 group 合并进 entitlement 后再打包。
+
 ## 功能（相对原版）
 
 | 能力 | 命令 |
