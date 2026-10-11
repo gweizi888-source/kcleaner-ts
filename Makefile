@@ -12,7 +12,8 @@ LDFLAGS	=\
 	-framework Security\
 	-lobjc\
 	-lsqlite3\
-	-target $(IOS_TARGET)
+	-target $(IOS_TARGET)\
+	-Wl,-fixup_chains=off
 
 GCC_ARM = $(GCC_BIN) -Os -Wimplicit -isysroot $(SDK) $(ARCH_FLAGS)
 
