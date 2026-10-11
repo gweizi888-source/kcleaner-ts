@@ -16,9 +16,10 @@ jobs:
 
       - name: Install ldid
         run: |
-          git clone --depth 1 https://github.com/opa334/ldid.git /tmp/ldid
-          cd /tmp/ldid && ./make.sh
-          echo "/tmp/ldid" >> "$GITHUB_PATH"
+          git clone --depth 1 https://github.com/opa334/ldid.git /tmp/ldid-src
+          cd /tmp/ldid-src && make -j"$(sysctl -n hw.ncpu)"
+          install -m 755 /tmp/ldid-src/ldid /usr/local/bin/ldid
+          ldid -h || true
 
       - name: Build kcleaner_ts
         run: make clean && make
