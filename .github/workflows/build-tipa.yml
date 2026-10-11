@@ -21,10 +21,8 @@ jobs:
 
       - name: Install ldid
         run: |
-          brew install libplist openssl@3 pkg-config
-          git clone --depth 1 https://github.com/opa334/ldid.git /tmp/ldid-src
-          cd /tmp/ldid-src && make -j"$(sysctl -n hw.ncpu)"
-          install -m 755 /tmp/ldid-src/ldid /usr/local/bin/ldid
+          brew install ldid
+          which ldid
           ldid 2>&1 | head -n 1 || true
 
       - name: Build kcleaner_ts
