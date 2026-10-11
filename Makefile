@@ -13,7 +13,7 @@ LDFLAGS	=\
 	-lobjc\
 	-lsqlite3\
 	-miphoneos-version-min=15.0\
-	-Wl,-fixup_chains,off
+	-Wl,-fixup_chains=off
 
 GCC_ARM = $(GCC_BIN) -Os -Wimplicit -isysroot $(SDK) $(ARCH_FLAGS) -miphoneos-version-min=15.0
 
